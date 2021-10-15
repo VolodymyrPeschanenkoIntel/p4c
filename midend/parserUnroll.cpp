@@ -540,8 +540,7 @@ class ParserSymbolicInterpreter {
                 // If no header validity has changed we can't really unroll
                 if (!headerValidityChange(crt->before, state->before)) {
                     if (unroll)
-                        ::error(ErrorType::ERR_INVALID, "Parser cycle cannot be unrolled:\n%1%",
-                                stateChain(state));
+                        ::warning("Parser cycle cannot be unrolled:\n%1%", stateChain(state));
                     return true;
                 }
                 break;
@@ -585,13 +584,15 @@ class ParserSymbolicInterpreter {
         auto result = evaluateSelect(state, valueMap);
         if (unroll) {
             BUG_CHECK(result.second, "Can't generate new selection %1%", state);
-            state->newState = new IR::ParserState(newName, components, result.second);
+            state->newState = new IR::ParserState(state->state->srcInfo, newName,
+                state->state->annotations, components, result.second);
         }
         return EvaluationStateResult(result.first, true);
     }
 
  public:
     bool  hasOutOfboundState;
+    bool  hasInfiniteLoops;
     /// constructor
     ParserSymbolicInterpreter(ParserStructure* structure, ReferenceMap* refMap, TypeMap* typeMap,
                               bool unroll) : structure(structure), refMap(refMap),
@@ -600,6 +601,7 @@ class ParserSymbolicInterpreter {
         factory = new SymbolicValueFactory(typeMap);
         parser = structure->parser;
         hasOutOfboundState = false;
+        hasInfiniteLoops = false;
     }
     /// running symbolic execution
     ParserInfo* run() {
@@ -629,9 +631,11 @@ class ParserSymbolicInterpreter {
             visited.insert(VisitedKey(stateInfo));  // add to visited map
             stateInfo->scenarioStates.insert(stateInfo->name);  // add to loops detection
             bool infLoop = checkLoops(stateInfo);
-            if (infLoop)
+            if (infLoop) {
                 // don't evaluate successors anymore
-                continue;
+                hasInfiniteLoops = true;
+                break;
+            }
             auto nextStates = evaluateState(stateInfo, newStates);
             if (nextStates.first == nullptr) {
                 if (nextStates.second && stateInfo->predecessor &&
@@ -655,10 +659,11 @@ class ParserSymbolicInterpreter {
 
 }  // namespace ParserStructureImpl
 
-bool ParserStructure::analyze(ReferenceMap* refMap, TypeMap* typeMap, bool unroll) {
+std::pair<bool, bool> ParserStructure::analyze(ReferenceMap* refMap, TypeMap* typeMap,
+                                               bool unroll) {
     ParserStructureImpl::ParserSymbolicInterpreter psi(this, refMap, typeMap, unroll);
     result = psi.run();
-    return psi.hasOutOfboundState;
+    return std::make_pair(psi.hasOutOfboundState, psi.hasInfiniteLoops);
 }
 
 /// check reachability for usage of header stack
