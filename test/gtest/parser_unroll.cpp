@@ -318,7 +318,7 @@ TEST_F(P4CParserUnroll, header_union) {
     // The extra state in parsers.second is the outOfBound state that's correct.
     // But due to the fact that parsers.first does not have such an outOfBound state,
     // we have to subtract it from parsers.second.
-    ASSERT_EQ(parsers.first->states.size(), parsers.second->states.size() - 1);
+    ASSERT_EQ(parsers.first->states.size(), parsers.second->states.size());
 }
 
 }  // namespace Test
