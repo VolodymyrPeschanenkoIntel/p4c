@@ -69,14 +69,16 @@ class HSIndexTransform : public Transform {
 class HSIndexContretizer : public Transform {
     ReferenceMap* refMap;
     TypeMap* typeMap;
+    bool concretizeIndexes;
     IR::IndexedVector<IR::Declaration>* locals;
     GeneratedVariablesMap* generatedVariables;
 
  public:
-    HSIndexContretizer(ReferenceMap* refMap, TypeMap* typeMap,
+    HSIndexContretizer(ReferenceMap* refMap, TypeMap* typeMap, bool concretizeIndexes,
                       IR::IndexedVector<IR::Declaration>* locals = nullptr,
                       GeneratedVariablesMap* generatedVariables = nullptr)
-        : refMap(refMap), typeMap(typeMap), locals(locals), generatedVariables(generatedVariables) {
+        : refMap(refMap), typeMap(typeMap), concretizeIndexes(concretizeIndexes), locals(locals),
+        generatedVariables(generatedVariables) {
         if (generatedVariables == nullptr) generatedVariables = new GeneratedVariablesMap();
     }
     IR::Node* preorder(IR::IfStatement* ifStatement) override;
@@ -94,10 +96,10 @@ class HSIndexContretizer : public Transform {
 
 class HSIndexSimplifier : public PassManager {
  public:
-    HSIndexSimplifier(ReferenceMap* refMap, TypeMap* typeMap) {
+    HSIndexSimplifier(ReferenceMap* refMap, TypeMap* typeMap, bool concretizeIndexes = true) {
         // remove block statements
         passes.push_back(new TypeChecking(refMap, typeMap, true));
-        passes.push_back(new HSIndexContretizer(refMap, typeMap));
+        passes.push_back(new HSIndexContretizer(refMap, typeMap, concretizeIndexes));
         setName("HSIndexSimplifier");
     }
 };

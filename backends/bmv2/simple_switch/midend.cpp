@@ -39,6 +39,7 @@ limitations under the License.
 #include "midend/eliminateTypedefs.h"
 #include "midend/flattenHeaders.h"
 #include "midend/flattenInterfaceStructs.h"
+#include "midend/hsIndexSimplify.h"
 #include "midend/replaceSelectRange.h"
 #include "midend/local_copyprop.h"
 #include "midend/nestedStructs.h"
@@ -127,6 +128,7 @@ SimpleSwitchMidEnd::SimpleSwitchMidEnd(CompilerOptions& options, std::ostream* o
             isv1 ? new P4::RemoveUnusedActionParameters(&refMap) : nullptr,
             new P4::TypeChecking(&refMap, &typeMap),
             options.loopsUnrolling ? new P4::ParsersUnroll(true, &refMap, &typeMap) : nullptr,
+            new P4::HSIndexSimplifier(&refMap, &typeMap, false),
             evaluator,
             [this, evaluator]() { toplevel = evaluator->getToplevelBlock(); },
             new P4::MidEndLast()
