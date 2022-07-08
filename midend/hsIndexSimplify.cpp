@@ -113,9 +113,13 @@ IR::Node* HSIndexContretizer::eliminateArrayIndexes(HSIndexFinder& aiFinder,
         auto* newStatement =
             new IR::AssignmentStatement(aiFinder.arrayIndex->srcInfo, expr, pathExpr);
         auto* newCondition = new IR::Geq(
-            aiFinder.newVariable, new IR::Constant(aiFinder.arrayIndex->right->type, sz - 1));
+            aiFinder.newVariable, new IR::Constant(aiFinder.arrayIndex->right->type, sz));
         newIf = new IR::IfStatement(newCondition, newStatement, nullptr);
-        curResult->ifFalse = newIf;
+        if (concretizeIndexes) {
+            curResult->ifFalse = newIf;
+        } else {
+            result = newIf;
+        }
     }
     newIf->ifFalse = elseBody;
     newComponents.push_back(result);
